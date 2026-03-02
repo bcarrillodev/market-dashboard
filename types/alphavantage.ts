@@ -105,9 +105,7 @@ export interface Candle {
 
 export interface StockCandle extends Candle {}
 
-export interface CryptoCandle extends Candle {
-  marketCap: number;
-}
+export interface CryptoCandle extends Candle {}
 
 // Base time series interface for consistent graph rendering
 export interface TimeSeries {

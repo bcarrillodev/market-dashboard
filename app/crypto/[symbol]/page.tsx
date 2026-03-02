@@ -70,7 +70,7 @@ export default async function CryptoPage({ params }: CryptoPageProps) {
           {/* Crypto Metrics */}
           <ThemedCard className="p-4">
             <h2 className="text-lg font-semibold mb-4">Key Metrics</h2>
-            <CryptoMetrics timeSeries={timeSeries} />
+            <CryptoMetrics timeSeries={timeSeries} symbol={symbol} />
           </ThemedCard>
         </div>
 

@@ -7,20 +7,16 @@ export interface WatchlistItem {
 }
 
 export interface Watchlist {
-  stocks: WatchlistItem[];
-  crypto: WatchlistItem[];
+  items: WatchlistItem[];
 }
 
 export const DEFAULT_WATCHLIST: Watchlist = {
-  stocks: [
+  items: [
     { symbol: 'AAPL', type: 'stock', addedAt: new Date().toISOString() },
     { symbol: 'MSFT', type: 'stock', addedAt: new Date().toISOString() },
     { symbol: 'GOOGL', type: 'stock', addedAt: new Date().toISOString() },
     { symbol: 'AMZN', type: 'stock', addedAt: new Date().toISOString() },
     { symbol: 'TSLA', type: 'stock', addedAt: new Date().toISOString() },
-    { symbol: 'BINANCE:BTCUSDT', type: 'crypto', addedAt: new Date().toISOString() },
-  ],
-  crypto: [
     { symbol: 'BINANCE:BTCUSDT', type: 'crypto', addedAt: new Date().toISOString() },
     { symbol: 'BINANCE:ETHUSDT', type: 'crypto', addedAt: new Date().toISOString() },
   ],

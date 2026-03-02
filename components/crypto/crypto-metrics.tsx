@@ -4,9 +4,10 @@ import { NumberDisplay } from '@/components/ui/number-display';
 
 interface CryptoMetricsProps {
   timeSeries: CryptoTimeSeries;
+  symbol: string;
 }
 
-export function CryptoMetrics({ timeSeries }: CryptoMetricsProps) {
+export function CryptoMetrics({ timeSeries, symbol }: CryptoMetricsProps) {
   const latestCandle = timeSeries.candles[0];
   const previousCandle = timeSeries.candles[1];
   
@@ -17,6 +18,9 @@ export function CryptoMetrics({ timeSeries }: CryptoMetricsProps) {
       </div>
     );
   }
+
+  const isBTC = symbol.toUpperCase() === 'BTCUSDT';
+  const decimalPlaces = isBTC ? 0 : 2;
 
   const currentPrice = latestCandle.close;
   const previousPrice = previousCandle?.close || currentPrice;
@@ -34,15 +38,12 @@ export function CryptoMetrics({ timeSeries }: CryptoMetricsProps) {
   );
   const volume24h = lastDayCandles.reduce((sum, candle) => sum + candle.volume, 0);
 
-  // Get latest market cap
-  const marketCap = latestCandle.marketCap;
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <ThemedCard className="p-4">
         <div className="text-sm text-muted-foreground mb-1">Current Price</div>
         <NumberDisplay 
-          value={currentPrice.toFixed(2)} 
+          value={currentPrice.toFixed(decimalPlaces)} 
           prefix="$" 
           size="lg"
         />
@@ -66,22 +67,10 @@ export function CryptoMetrics({ timeSeries }: CryptoMetricsProps) {
         />
       </ThemedCard>
 
-      {marketCap && (
-        <ThemedCard className="p-4">
-          <div className="text-sm text-muted-foreground mb-1">Market Cap</div>
-          <NumberDisplay 
-            value={(marketCap / 1000000000).toFixed(2)} 
-            suffix="B"
-            prefix="$"
-            size="lg"
-          />
-        </ThemedCard>
-      )}
-
       <ThemedCard className="p-4">
         <div className="text-sm text-muted-foreground mb-1">Day High</div>
         <NumberDisplay 
-          value={latestCandle.high.toFixed(2)} 
+          value={latestCandle.high.toFixed(decimalPlaces)} 
           prefix="$" 
           size="lg"
         />
@@ -90,7 +79,7 @@ export function CryptoMetrics({ timeSeries }: CryptoMetricsProps) {
       <ThemedCard className="p-4">
         <div className="text-sm text-muted-foreground mb-1">Day Low</div>
         <NumberDisplay 
-          value={latestCandle.low.toFixed(2)} 
+          value={latestCandle.low.toFixed(decimalPlaces)} 
           prefix="$" 
           size="lg"
         />
@@ -99,16 +88,8 @@ export function CryptoMetrics({ timeSeries }: CryptoMetricsProps) {
       <ThemedCard className="p-4">
         <div className="text-sm text-muted-foreground mb-1">Day Open</div>
         <NumberDisplay 
-          value={latestCandle.open.toFixed(2)} 
+          value={latestCandle.open.toFixed(decimalPlaces)} 
           prefix="$" 
-          size="lg"
-        />
-      </ThemedCard>
-
-      <ThemedCard className="p-4">
-        <div className="text-sm text-muted-foreground mb-1">Data Points</div>
-        <NumberDisplay 
-          value={timeSeries.candles.length.toString()} 
           size="lg"
         />
       </ThemedCard>

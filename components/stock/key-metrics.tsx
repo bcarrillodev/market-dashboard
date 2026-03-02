@@ -1,6 +1,6 @@
 import { BasicFinancials } from '@/types/finnhub';
 import { NumberDisplay } from '@/components/ui/number-display';
-import { cn } from '@/lib/utils';
+import { ThemedCard } from '@/components/ui/themed-card';
 
 interface KeyMetricsProps {
   financials: BasicFinancials;
@@ -12,8 +12,8 @@ export function KeyMetrics({ financials }: KeyMetricsProps) {
     { label: 'EPS (TTM)', value: financials.metric['epsTTM'], format: '2', prefix: '$' },
     { label: 'ROE', value: financials.metric['roeTTM'], format: '2', suffix: '%' },
     { label: 'ROA', value: financials.metric['roaTTM'], format: '2', suffix: '%' },
-    { label: 'Debt/Equity', value: financials.metric['totalDebt/totalEquityTTM'], format: '2' },
-    { label: 'Current Ratio', value: financials.metric['currentRatioTTM'], format: '2' },
+    // { label: 'Debt/Equity', value: financials.metric['totalDebt/totalEquityTTM'], format: '2' },
+    // { label: 'Current Ratio', value: financials.metric['currentRatioTTM'], format: '2' },
     { label: 'Gross Margin', value: financials.metric['grossMarginTTM'], format: '2', suffix: '%' },
     { label: 'Operating Margin', value: financials.metric['operatingMarginTTM'], format: '2', suffix: '%' },
     { label: '52W High', value: financials.metric['52WeekHigh'], format: '2', prefix: '$' },
@@ -23,27 +23,21 @@ export function KeyMetrics({ financials }: KeyMetricsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {metrics.map((metric) => (
-        <div
-          key={metric.label}
-          className={cn(
-            "p-3 rounded-lg",
-            "bg-muted/50"
-          )}
-        >
-          <p className="text-xs text-muted-foreground mb-1">{metric.label}</p>
+        <ThemedCard key={metric.label} className="p-4">
+          <div className="text-sm text-muted-foreground mb-1">{metric.label}</div>
           {metric.value !== null && metric.value !== undefined ? (
             <NumberDisplay
               value={metric.value.toFixed(parseInt(metric.format))}
               prefix={metric.prefix}
               suffix={metric.suffix}
-              size="md"
+              size="lg"
             />
           ) : (
-            <span className="text-sm text-muted-foreground">—</span>
+            <span className="text-lg text-muted-foreground">—</span>
           )}
-        </div>
+        </ThemedCard>
       ))}
     </div>
   );

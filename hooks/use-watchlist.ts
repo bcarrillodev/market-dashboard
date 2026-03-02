@@ -31,12 +31,11 @@ export function useWatchlist() {
 
   const addToWatchlist = useCallback((symbol: string, type: 'stock' | 'crypto') => {
     setWatchlist(prev => {
-      const key = type === 'stock' ? 'stocks' : 'crypto';
-      if (prev[key].some(item => item.symbol === symbol)) return prev;
+      if (prev.items.some(item => item.symbol === symbol && item.type === type)) return prev;
       
       return {
         ...prev,
-        [key]: [...prev[key], { symbol, type, addedAt: new Date().toISOString() }]
+        items: [...prev.items, { symbol, type, addedAt: new Date().toISOString() }]
       };
     });
   }, []);
@@ -44,14 +43,12 @@ export function useWatchlist() {
   const removeFromWatchlist = useCallback((symbol: string, type: 'stock' | 'crypto') => {
     setWatchlist(prev => ({
       ...prev,
-      [type === 'stock' ? 'stocks' : 'crypto']: prev[type === 'stock' ? 'stocks' : 'crypto']
-        .filter(item => item.symbol !== symbol)
+      items: prev.items.filter(item => !(item.symbol === symbol && item.type === type))
     }));
   }, []);
 
   const isInWatchlist = useCallback((symbol: string, type: 'stock' | 'crypto') => {
-    const key = type === 'stock' ? 'stocks' : 'crypto';
-    return watchlist[key].some(item => item.symbol === symbol);
+    return watchlist?.items?.some(item => item.symbol === symbol && item.type === type) || false;
   }, [watchlist]);
 
   return {

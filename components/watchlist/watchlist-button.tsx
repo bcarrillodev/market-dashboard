@@ -30,7 +30,7 @@ export function WatchlistButton({ symbol, type }: WatchlistButtonProps) {
           : 'bg-cyan-400 hover:bg-cyan-500 text-black'}`}
         onClick={handleClick}
       >
-        <Plus className="w-4 h-4 mr-2" />
+        {inWatchlist ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
         {inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
       </Button>
     </div>

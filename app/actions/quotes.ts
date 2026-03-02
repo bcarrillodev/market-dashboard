@@ -1,7 +1,9 @@
 'use server';
 
 import { getQuote, getCompanyProfile, getBasicFinancials, getNews, getCandles, getRecommendationTrends, getSearch, getMarketNews } from '@/lib/finnhub/cache';
+import { getStockDaily } from '@/lib/alphavantage/cache';
 import type { Quote, CompanyProfile, BasicFinancials, NewsItem, CandleData, RecommendationTrend, SearchResult } from '@/types/finnhub';
+import type { StockTimeSeries } from '@/types/alphavantage';
 
 export async function getQuotes(symbols: string[]): Promise<Record<string, Quote>> {
   const quotes: Record<string, Quote> = {};
@@ -28,30 +30,25 @@ export interface StockDetailData {
   financials: BasicFinancials;
   news: NewsItem[];
   recommendations: RecommendationTrend[];
-  candles: CandleData;
+  candles: StockTimeSeries;
 }
 
 export async function getStockDetail(symbol: string): Promise<StockDetailData | null> {
   try {
     const upperSymbol = symbol.toUpperCase();
-    const to = Math.floor(Date.now() / 1000);
-    const from = to - 30 * 24 * 60 * 60; // 30 days ago
     
-    // Fetch candle data separately since it may fail due to API limitations
-    let candles: CandleData | null = null;
+    // Fetch Alpha Vantage stock data for chart
+    let candles: StockTimeSeries;
     try {
-      candles = await getCandles(upperSymbol, 'D', from, to);
+      candles = await getStockDaily(upperSymbol);
     } catch (candleError) {
-      console.warn(`Candle data not available for ${upperSymbol} (likely requires premium API):`, candleError);
+      console.warn(`Alpha Vantage candle data not available for ${upperSymbol}:`, candleError);
       // Provide empty candle data as fallback
       candles = {
-        c: [],
-        h: [],
-        l: [],
-        o: [],
-        s: "no_data",
-        t: [],
-        v: []
+        symbol: upperSymbol,
+        lastRefreshed: new Date().toISOString(),
+        timeZone: 'UTC',
+        candles: [],
       };
     }
     
@@ -73,15 +70,7 @@ export async function getStockDetail(symbol: string): Promise<StockDetailData | 
       financials,
       news,
       recommendations,
-      candles: candles || {
-        c: [],
-        h: [],
-        l: [],
-        o: [],
-        s: "no_data",
-        t: [],
-        v: []
-      },
+      candles,
     };
   } catch (error) {
     console.error(`Failed to fetch stock detail for ${symbol}:`, error);

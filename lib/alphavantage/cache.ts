@@ -128,8 +128,7 @@ function normalizeDailyData(response: DigitalCurrencyDailyResponse): CryptoTimeS
       high: parseFloat(data['2. high']),
       low: parseFloat(data['3. low']),
       close: parseFloat(data['4. close']),
-      volume: parseFloat(data['5. volume']),
-      marketCap: 0, // AlphaVantage doesn't provide market cap in daily data
+      volume: parseFloat(data['5. volume'])
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -158,8 +157,7 @@ function normalizeWeeklyData(response: DigitalCurrencyWeeklyResponse): CryptoTim
       high: parseFloat(data['2. high']),
       low: parseFloat(data['3. low']),
       close: parseFloat(data['4. close']),
-      volume: parseFloat(data['5. volume']),
-      marketCap: 0, // AlphaVantage doesn't provide market cap in weekly data
+      volume: parseFloat(data['5. volume'])
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -189,7 +187,16 @@ export const getStockDaily = cache(async (symbol: string): Promise<StockTimeSeri
     symbol,
   });
 
-  return normalizeStockDailyData(data);
+  const result = normalizeStockDailyData(data);
+  
+  // Log the date range for debugging
+  if (result.candles.length > 0) {
+    const earliestDate = result.candles[result.candles.length - 1].date;
+    const latestDate = result.candles[0].date;
+    console.log(`Alpha Vantage data for ${symbol}: ${earliestDate} to ${latestDate} (${result.candles.length} data points)`);
+  }
+  
+  return result;
 });
 
 export const getStockWeekly = cache(async (symbol: string): Promise<StockTimeSeries> => {

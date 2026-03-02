@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   // Initial data fetch for server render
   const [initialQuotes, news] = await Promise.all([
     Promise.all(
-      DEFAULT_WATCHLIST.stocks.map(item => 
+      DEFAULT_WATCHLIST.items.map(item => 
         safeFetch(() => getQuote(item.symbol), null)
       )
     ),
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
           <ThemedCard className="p-4">
             <Suspense fallback={<div>Loading watchlist...</div>}>
               <LiveWatchlist 
-                symbols={DEFAULT_WATCHLIST.stocks}
+                symbols={DEFAULT_WATCHLIST.items}
                 initialQuotes={initialQuotes}
               />
             </Suspense>
