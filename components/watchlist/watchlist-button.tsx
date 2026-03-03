@@ -10,7 +10,7 @@ interface WatchlistButtonProps {
 }
 
 export function WatchlistButton({ symbol, type }: WatchlistButtonProps) {
-  const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
+  const { addToWatchlist, removeFromWatchlist, isInWatchlist, isLoaded } = useWatchlist();
   
   const inWatchlist = isInWatchlist(symbol, type);
 
@@ -29,6 +29,7 @@ export function WatchlistButton({ symbol, type }: WatchlistButtonProps) {
           ? 'bg-red-500 hover:bg-red-600 text-white' 
           : 'bg-cyan-400 hover:bg-cyan-500 text-black'}`}
         onClick={handleClick}
+        disabled={!isLoaded}
       >
         {inWatchlist ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
         {inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}

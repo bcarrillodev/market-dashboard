@@ -18,6 +18,7 @@ export const DEFAULT_WATCHLIST: Watchlist = {
     { symbol: 'AMZN', type: 'stock', addedAt: new Date().toISOString() },
     { symbol: 'TSLA', type: 'stock', addedAt: new Date().toISOString() },
     { symbol: 'BINANCE:BTCUSDT', type: 'crypto', addedAt: new Date().toISOString() },
+    { symbol: 'BINANCE:XRPUSDT', type: 'crypto', addedAt: new Date().toISOString() },
     { symbol: 'BINANCE:ETHUSDT', type: 'crypto', addedAt: new Date().toISOString() },
   ],
 };

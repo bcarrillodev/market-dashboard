@@ -1,24 +1,14 @@
-import { getQuote, getMarketNews } from '@/lib/finnhub/cache';
+import { getMarketNews } from '@/lib/finnhub/cache';
 import { safeFetch } from '@/lib/finnhub/error-handler';
-import type { Quote, NewsItem } from '@/types/finnhub';
 import { ThemedCard } from '@/components/ui/themed-card';
 import { NewsList } from '@/components/news/news-list';
-import { LiveWatchlist } from '@/components/watchlist/live-watchlist';
-import { DEFAULT_WATCHLIST } from '@/types/watchlist';
+import { LiveWatchlistClient } from '@/components/watchlist/live-watchlist-client';
 import { Suspense } from 'react';
 
 export const revalidate = 60;
 
 export default async function DashboardPage() {
-  // Initial data fetch for server render
-  const [initialQuotes, news] = await Promise.all([
-    Promise.all(
-      DEFAULT_WATCHLIST.items.map(item => 
-        safeFetch(() => getQuote(item.symbol), null)
-      )
-    ),
-    safeFetch(() => getMarketNews('general'), []),
-  ]);
+  const news = await safeFetch(() => getMarketNews('general'), []);
 
   return (
     <div className="space-y-6">
@@ -36,10 +26,7 @@ export default async function DashboardPage() {
           <h2 className="text-xl font-semibold">Watchlist</h2>
           <ThemedCard className="p-4">
             <Suspense fallback={<div>Loading watchlist...</div>}>
-              <LiveWatchlist 
-                symbols={DEFAULT_WATCHLIST.items}
-                initialQuotes={initialQuotes}
-              />
+              <LiveWatchlistClient />
             </Suspense>
           </ThemedCard>
         </section>

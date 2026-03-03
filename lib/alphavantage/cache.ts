@@ -1,7 +1,5 @@
-import { cache } from 'react';
 import type {
   StockDailyResponse,
-  StockWeeklyResponse,
   StockTimeSeries,
   StockCandle,
   DigitalCurrencyDailyResponse,
@@ -13,6 +11,7 @@ import type {
 const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY;
 const ALPHAVANTAGE_BASE_URL = 'https://www.alphavantage.co/query';
 const ALPHAVANTAGE_TIMEOUT_MS = 10000;
+const DEFAULT_REVALIDATE_SECONDS = 3600;
 
 // Check if API key is available
 const hasApiKey = !!ALPHAVANTAGE_API_KEY;
@@ -24,7 +23,15 @@ class AlphaVantageError extends Error {
   }
 }
 
-async function fetchAlphaVantage<T>(params: Record<string, string>): Promise<T> {
+interface FetchAlphaVantageOptions {
+  revalidate?: number;
+  tags?: string[];
+}
+
+async function fetchAlphaVantage<T>(
+  params: Record<string, string>,
+  options: FetchAlphaVantageOptions = {}
+): Promise<T> {
   // Return empty data if no API key is available
   if (!hasApiKey) {
     console.warn('ALPHAVANTAGE_API_KEY is not defined, returning empty data');
@@ -42,6 +49,11 @@ async function fetchAlphaVantage<T>(params: Record<string, string>): Promise<T> 
   });
 
   const response = await fetch(url.toString(), {
+    cache: 'force-cache',
+    next: {
+      revalidate: options.revalidate ?? DEFAULT_REVALIDATE_SECONDS,
+      tags: options.tags,
+    },
     signal: AbortSignal.timeout(ALPHAVANTAGE_TIMEOUT_MS),
     headers: {
       'Content-Type': 'application/json',
@@ -86,29 +98,6 @@ function normalizeStockDailyData(response: StockDailyResponse): StockTimeSeries 
     symbol: meta['2. Symbol'],
     lastRefreshed: meta['3. Last Refreshed'],
     timeZone: meta['5. Time Zone'],
-    candles,
-  };
-}
-
-function normalizeStockWeeklyData(response: StockWeeklyResponse): StockTimeSeries {
-  const meta = response['Meta Data'];
-  const timeSeries = response['Weekly Time Series'];
-
-  const candles: StockCandle[] = Object.entries(timeSeries)
-    .map(([date, data]) => ({
-      date,
-      open: parseFloat(data['1. open']),
-      high: parseFloat(data['2. high']),
-      low: parseFloat(data['3. low']),
-      close: parseFloat(data['4. close']),
-      volume: parseFloat(data['5. volume']),
-    }))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  return {
-    symbol: meta['2. Symbol'],
-    lastRefreshed: meta['3. Last Refreshed'],
-    timeZone: meta['4. Time Zone'],
     candles,
   };
 }
@@ -171,7 +160,7 @@ function normalizeWeeklyData(response: DigitalCurrencyWeeklyResponse): CryptoTim
   };
 }
 
-export const getStockDaily = cache(async (symbol: string): Promise<StockTimeSeries> => {
+export async function getStockDaily(symbol: string): Promise<StockTimeSeries> {
   if (!hasApiKey) {
     console.warn(`No Alpha Vantage API key available for ${symbol} daily data`);
     return {
@@ -185,6 +174,9 @@ export const getStockDaily = cache(async (symbol: string): Promise<StockTimeSeri
   const data = await fetchAlphaVantage<StockDailyResponse>({
     function: 'TIME_SERIES_DAILY',
     symbol,
+  }, {
+    revalidate: 3600,
+    tags: [`stock-daily:${symbol}`],
   });
 
   const result = normalizeStockDailyData(data);
@@ -197,31 +189,12 @@ export const getStockDaily = cache(async (symbol: string): Promise<StockTimeSeri
   }
   
   return result;
-});
+}
 
-export const getStockWeekly = cache(async (symbol: string): Promise<StockTimeSeries> => {
-  if (!hasApiKey) {
-    console.warn(`No Alpha Vantage API key available for ${symbol} weekly data`);
-    return {
-      symbol,
-      lastRefreshed: new Date().toISOString(),
-      timeZone: 'UTC',
-      candles: [],
-    };
-  }
-
-  const data = await fetchAlphaVantage<StockWeeklyResponse>({
-    function: 'TIME_SERIES_WEEKLY',
-    symbol,
-  });
-
-  return normalizeStockWeeklyData(data);
-});
-
-export const getDigitalCurrencyDaily = cache(async (
+export async function getDigitalCurrencyDaily(
   symbol: string,
   market: string = 'USD'
-): Promise<CryptoTimeSeries> => {
+): Promise<CryptoTimeSeries> {
   if (!hasApiKey) {
     console.warn(`No Alpha Vantage API key available for ${symbol} daily crypto data`);
     return {
@@ -238,15 +211,18 @@ export const getDigitalCurrencyDaily = cache(async (
     function: 'DIGITAL_CURRENCY_DAILY',
     symbol,
     market,
+  }, {
+    revalidate: 1800,
+    tags: [`crypto-daily:${symbol}:${market}`],
   });
 
   return normalizeDailyData(data);
-});
+}
 
-export const getDigitalCurrencyWeekly = cache(async (
+export async function getDigitalCurrencyWeekly(
   symbol: string,
   market: string = 'USD'
-): Promise<CryptoTimeSeries> => {
+): Promise<CryptoTimeSeries> {
   if (!hasApiKey) {
     console.warn(`No Alpha Vantage API key available for ${symbol} weekly crypto data`);
     return {
@@ -263,9 +239,10 @@ export const getDigitalCurrencyWeekly = cache(async (
     function: 'DIGITAL_CURRENCY_WEEKLY',
     symbol,
     market,
+  }, {
+    revalidate: 43200,
+    tags: [`crypto-weekly:${symbol}:${market}`],
   });
 
   return normalizeWeeklyData(data);
-});
-
-export { AlphaVantageError };
+}

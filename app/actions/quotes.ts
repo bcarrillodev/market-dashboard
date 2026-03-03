@@ -1,8 +1,9 @@
 'use server';
 
-import { getQuote, getCompanyProfile, getBasicFinancials, getNews, getCandles, getRecommendationTrends, getSearch, getMarketNews } from '@/lib/finnhub/cache';
+import { getQuote, getCompanyProfile, getBasicFinancials, getNews, getRecommendationTrends, getSearch, getMarketNews } from '@/lib/finnhub/cache';
 import { getStockDaily } from '@/lib/alphavantage/cache';
-import type { Quote, CompanyProfile, BasicFinancials, NewsItem, CandleData, RecommendationTrend, SearchResult } from '@/types/finnhub';
+import { safeFetch } from '@/lib/finnhub/error-handler';
+import type { Quote, CompanyProfile, BasicFinancials, NewsItem, RecommendationTrend, SearchResult } from '@/types/finnhub';
 import type { StockTimeSeries } from '@/types/alphavantage';
 
 export async function getQuotes(symbols: string[]): Promise<Record<string, Quote>> {
@@ -36,31 +37,43 @@ export interface StockDetailData {
 export async function getStockDetail(symbol: string): Promise<StockDetailData | null> {
   try {
     const upperSymbol = symbol.toUpperCase();
-    
-    // Fetch Alpha Vantage stock data for chart
-    let candles: StockTimeSeries;
-    try {
-      candles = await getStockDaily(upperSymbol);
-    } catch (candleError) {
+    const newsFrom = getDaysAgoString(7);
+    const newsTo = getTodayString();
+
+    const candlesPromise = getStockDaily(upperSymbol).catch((candleError) => {
       console.warn(`Alpha Vantage candle data not available for ${upperSymbol}:`, candleError);
-      // Provide empty candle data as fallback
-      candles = {
+      return {
         symbol: upperSymbol,
         lastRefreshed: new Date().toISOString(),
         timeZone: 'UTC',
         candles: [],
-      };
-    }
-    
-    const [quote, profile, financials, news, recommendations] = await Promise.all([
-      getQuote(upperSymbol),
-      getCompanyProfile(upperSymbol),
-      getBasicFinancials(upperSymbol),
-      getNews(upperSymbol, getDaysAgoString(7), getTodayString()),
-      getRecommendationTrends(upperSymbol),
+      } satisfies StockTimeSeries;
+    });
+
+    const [quote, profile, financials, news, recommendations, candles] = await Promise.all([
+      safeFetch(() => getQuote(upperSymbol), {
+        c: 0,
+        d: 0,
+        dp: 0,
+        h: 0,
+        l: 0,
+        o: 0,
+        pc: 0,
+        t: 0,
+      }),
+      safeFetch(() => getCompanyProfile(upperSymbol), {}),
+      safeFetch(() => getBasicFinancials(upperSymbol), {
+        metric: {},
+        metricType: '',
+        series: {},
+        symbol: upperSymbol,
+      }),
+      safeFetch(() => getNews(upperSymbol, newsFrom, newsTo), []),
+      safeFetch(() => getRecommendationTrends(upperSymbol), []),
+      candlesPromise,
     ]);
 
-    if (!profile || Object.keys(profile).length === 0) {
+    if (!profile || Object.keys(profile).length === 0 || !profile.name) {
       return null;
     }
 

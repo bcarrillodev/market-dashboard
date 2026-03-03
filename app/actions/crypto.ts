@@ -4,19 +4,32 @@ import { getDigitalCurrencyDaily, getDigitalCurrencyWeekly } from '@/lib/alphava
 import { fetchMarketNews } from '@/app/actions/quotes';
 import type { CryptoTimeSeries } from '@/types/alphavantage';
 import type { NewsItem } from '@/types/finnhub';
+import { getCryptoBaseSymbol } from '@/lib/symbols';
 
 export interface CryptoDetailData {
   timeSeries: CryptoTimeSeries;
   news: NewsItem[];
 }
 
+function createFallbackTimeSeries(symbol: string): CryptoTimeSeries {
+  return {
+    symbol,
+    name: symbol,
+    market: 'USD',
+    lastRefreshed: new Date().toISOString(),
+    timeZone: 'UTC',
+    candles: [],
+  };
+}
+
 export async function getCryptoDetail(symbol: string): Promise<CryptoDetailData | null> {
   try {
-    // Extract the base symbol from Finnhub format (e.g., "BINANCE:BTCUSDT" -> "BTC")
-    const baseSymbol = symbol.includes(':') ? symbol.split(':')[1].replace('USDT', '') : symbol;
-    const upperSymbol = baseSymbol.toUpperCase();
+    const upperSymbol = getCryptoBaseSymbol(symbol);
+    const newsPromise = fetchMarketNews('crypto').catch((error) => {
+      console.error(`Failed to fetch crypto news for ${upperSymbol}:`, error);
+      return [];
+    });
     
-    // Try to get daily data first, fall back to weekly if daily fails
     let timeSeries: CryptoTimeSeries | null = null;
     try {
       timeSeries = await getDigitalCurrencyDaily(upperSymbol);
@@ -26,12 +39,12 @@ export async function getCryptoDetail(symbol: string): Promise<CryptoDetailData 
         timeSeries = await getDigitalCurrencyWeekly(upperSymbol);
       } catch (weeklyError) {
         console.error(`Failed to fetch crypto data for ${upperSymbol}:`, weeklyError);
-        return null;
+        timeSeries = createFallbackTimeSeries(upperSymbol);
       }
     }
 
     if (!timeSeries) {
-      return null;
+      timeSeries = createFallbackTimeSeries(upperSymbol);
     }
 
     // If no candles available, create empty timeSeries with basic info
@@ -39,8 +52,7 @@ export async function getCryptoDetail(symbol: string): Promise<CryptoDetailData 
       console.warn(`No candle data available for ${upperSymbol}, but continuing with empty data`);
     }
 
-    // Get crypto market news
-    const news = await fetchMarketNews('crypto');
+    const news = await newsPromise;
 
     return {
       timeSeries,

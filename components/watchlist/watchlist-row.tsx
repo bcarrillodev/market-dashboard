@@ -6,6 +6,7 @@ import { Quote } from '@/types/finnhub';
 import { NumberDisplay } from '@/components/ui/number-display';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getAssetHref, getDisplaySymbol } from '@/lib/symbols';
 
 interface WatchlistRowProps {
   item: WatchlistItem;
@@ -14,18 +15,17 @@ interface WatchlistRowProps {
 }
 
 export function WatchlistRow({ item, quote, isLoading }: WatchlistRowProps) {
-  const isPositive = quote ? quote.dp >= 0 : false;
-  const isNegative = quote ? quote.dp < 0 : false;
+  const hasPrice = typeof quote?.c === 'number' && Number.isFinite(quote.c);
+  const hasPercentChange = typeof quote?.dp === 'number' && Number.isFinite(quote.dp);
+  const isPositive = hasPercentChange ? quote.dp >= 0 : false;
+  const isNegative = hasPercentChange ? quote.dp < 0 : false;
 
   // Format symbol for display (remove BINANCE: prefix for crypto)
-  const displaySymbol = item.symbol.replace('BINANCE:', '');
-  
-  // Use clean symbol for crypto URLs, full symbol for stocks
-  const urlSymbol = item.type === 'crypto' ? displaySymbol : item.symbol;
+  const displaySymbol = getDisplaySymbol(item.symbol, item.type);
 
   return (
     <Link 
-      href={`/${item.type === 'crypto' ? 'crypto' : 'stock'}/${urlSymbol}`}
+      href={getAssetHref(item.type, item.symbol)}
       className={cn(
         "flex items-center justify-between p-3 rounded-lg transition-all duration-200",
         "hover:bg-accent/50"
@@ -54,10 +54,15 @@ export function WatchlistRow({ item, quote, isLoading }: WatchlistRowProps) {
       </div>
 
       <div className="text-right">
-        {isLoading || !quote ? (
+        {isLoading ? (
           <div className="space-y-1">
             <div className="h-5 w-16 bg-muted rounded animate-pulse" />
             <div className="h-4 w-12 bg-muted rounded animate-pulse" />
+          </div>
+        ) : !hasPrice ? (
+          <div className="space-y-1">
+            <div className="text-sm text-muted-foreground">Quote unavailable</div>
+            <div className="text-xs text-muted-foreground">Try again later</div>
           </div>
         ) : (
           <>
@@ -68,17 +73,23 @@ export function WatchlistRow({ item, quote, isLoading }: WatchlistRowProps) {
               className="block"
             />
             <div className="flex items-center gap-1 justify-end">
-              {isPositive ? (
-                <TrendingUp className="w-3 h-3 text-emerald-500" />
+              {hasPercentChange ? (
+                <>
+                  {isPositive ? (
+                    <TrendingUp className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-rose-500" />
+                  )}
+                  <NumberDisplay 
+                    value={`${isPositive ? '+' : ''}${quote.dp.toFixed(2)}%`}
+                    positive={isPositive}
+                    negative={isNegative}
+                    size="sm"
+                  />
+                </>
               ) : (
-                <TrendingDown className="w-3 h-3 text-rose-500" />
+                <span className="text-sm text-muted-foreground">N/A</span>
               )}
-              <NumberDisplay 
-                value={`${isPositive ? '+' : ''}${quote.dp.toFixed(2)}%`}
-                positive={isPositive}
-                negative={isNegative}
-                size="sm"
-              />
             </div>
           </>
         )}

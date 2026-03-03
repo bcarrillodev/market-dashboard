@@ -1,29 +1,34 @@
-import { cache } from 'react';
 import { FinnhubError } from './error-handler';
 import type {
   Quote,
   CompanyProfile,
-  CandleData,
   NewsItem,
   BasicFinancials,
-  Financials,
   RecommendationTrend,
   SearchResult,
-  EarningsItem,
-  IPOCalendarItem,
   NewsCategory,
-  CandleResolution,
 } from '@/types/finnhub';
 
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const FINNHUB_TIMEOUT_MS = 8000;
+const DEFAULT_REVALIDATE_SECONDS = 300;
 
 if (!FINNHUB_API_KEY) {
   throw new Error('FINNHUB_API_KEY is not defined in environment variables');
 }
 
-async function fetchFinnhub<T>(endpoint: string, params: Record<string, string | number> = {}): Promise<T> {
+interface FetchFinnhubOptions {
+  revalidate?: number;
+  tags?: string[];
+  cache?: RequestCache;
+}
+
+async function fetchFinnhub<T>(
+  endpoint: string,
+  params: Record<string, string | number> = {},
+  options: FetchFinnhubOptions = {}
+): Promise<T> {
   const url = new URL(`${FINNHUB_BASE_URL}${endpoint}`);
   
   // Add API key
@@ -35,6 +40,11 @@ async function fetchFinnhub<T>(endpoint: string, params: Record<string, string |
   });
 
   const response = await fetch(url.toString(), {
+    cache: options.cache ?? 'force-cache',
+    next: {
+      revalidate: options.revalidate ?? DEFAULT_REVALIDATE_SECONDS,
+      tags: options.tags,
+    },
     signal: AbortSignal.timeout(FINNHUB_TIMEOUT_MS),
     headers: {
       'Content-Type': 'application/json',
@@ -55,73 +65,58 @@ async function fetchFinnhub<T>(endpoint: string, params: Record<string, string |
   return data as T;
 }
 
-export const getQuote = cache(async (symbol: string): Promise<Quote> => {
-  return fetchFinnhub<Quote>('/quote', { symbol });
-});
-
-export const getCompanyProfile = cache(async (symbol: string): Promise<CompanyProfile> => {
-  return fetchFinnhub<CompanyProfile>('/stock/profile2', { symbol });
-});
-
-export const getCandles = cache(async (
-  symbol: string,
-  resolution: CandleResolution,
-  from: number,
-  to: number
-): Promise<CandleData> => {
-  return fetchFinnhub<CandleData>('/stock/candle', {
-    symbol,
-    resolution,
-    from,
-    to,
+export async function getQuote(symbol: string): Promise<Quote> {
+  return fetchFinnhub<Quote>('/quote', { symbol }, {
+    revalidate: 60,
+    tags: [`quote:${symbol}`],
   });
-});
+}
 
-export const getNews = cache(async (symbol: string, from: string, to: string): Promise<NewsItem[]> => {
+export async function getCompanyProfile(symbol: string): Promise<CompanyProfile> {
+  return fetchFinnhub<CompanyProfile>('/stock/profile2', { symbol }, {
+    revalidate: 3600,
+    tags: [`profile:${symbol}`],
+  });
+}
+
+export async function getNews(symbol: string, from: string, to: string): Promise<NewsItem[]> {
   return fetchFinnhub<NewsItem[]>('/company-news', {
     symbol,
     from,
     to,
+  }, {
+    revalidate: 300,
+    tags: [`news:${symbol}`],
   });
-});
+}
 
-export const getFinancials = cache(async (symbol: string): Promise<Financials> => {
-  return fetchFinnhub<Financials>('/stock/financials', {
-    symbol,
-    statement: 'ic',
-    period: 'annual',
-  });
-});
-
-export const getBasicFinancials = cache(async (symbol: string): Promise<BasicFinancials> => {
+export async function getBasicFinancials(symbol: string): Promise<BasicFinancials> {
   return fetchFinnhub<BasicFinancials>('/stock/metric', {
     symbol,
     metric: 'all',
+  }, {
+    revalidate: 3600,
+    tags: [`financials:${symbol}`],
   });
-});
+}
 
-export const getPeers = cache(async (symbol: string): Promise<string[]> => {
-  return fetchFinnhub<string[]>('/stock/peers', { symbol });
-});
+export async function getRecommendationTrends(symbol: string): Promise<RecommendationTrend[]> {
+  return fetchFinnhub<RecommendationTrend[]>('/stock/recommendation', { symbol }, {
+    revalidate: 3600,
+    tags: [`recommendations:${symbol}`],
+  });
+}
 
-export const getRecommendationTrends = cache(async (symbol: string): Promise<RecommendationTrend[]> => {
-  return fetchFinnhub<RecommendationTrend[]>('/stock/recommendation', { symbol });
-});
+export async function getMarketNews(category: NewsCategory): Promise<NewsItem[]> {
+  return fetchFinnhub<NewsItem[]>('/news', { category }, {
+    revalidate: 300,
+    tags: [`market-news:${category}`],
+  });
+}
 
-export const getEarnings = cache(async (symbol: string): Promise<EarningsItem[]> => {
-  const data = await fetchFinnhub<{ earningsCalendar: EarningsItem[] }>('/calendar/earnings', { symbol });
-  return data.earningsCalendar;
-});
-
-export const getMarketNews = cache(async (category: NewsCategory): Promise<NewsItem[]> => {
-  return fetchFinnhub<NewsItem[]>('/news', { category });
-});
-
-export const getSearch = cache(async (query: string): Promise<SearchResult> => {
-  return fetchFinnhub<SearchResult>('/search', { q: query });
-});
-
-export const getIPOCalendar = cache(async (from: string, to: string): Promise<IPOCalendarItem[]> => {
-  const data = await fetchFinnhub<{ ipoCalendar: IPOCalendarItem[] }>('/calendar/ipo', { from, to });
-  return data.ipoCalendar;
-});
+export async function getSearch(query: string): Promise<SearchResult> {
+  return fetchFinnhub<SearchResult>('/search', { q: query }, {
+    cache: 'no-store',
+    revalidate: 0,
+  });
+}

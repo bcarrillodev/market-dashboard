@@ -30,13 +30,9 @@ export function CryptoMetrics({ timeSeries, symbol }: CryptoMetricsProps) {
   const isPositive = priceChange >= 0;
   const isNegative = priceChange < 0;
 
-  // Calculate 24h volume (sum of last day's candles)
-  const oneDayAgo = new Date();
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-  const lastDayCandles = timeSeries.candles.filter(candle => 
-    new Date(candle.date) >= oneDayAgo
-  );
-  const volume24h = lastDayCandles.reduce((sum, candle) => sum + candle.volume, 0);
+  // Alpha Vantage crypto data is daily/weekly aggregated, so the latest candle
+  // already represents the most recent 24h volume when daily data is available.
+  const volume24h = latestCandle.volume;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -62,7 +58,7 @@ export function CryptoMetrics({ timeSeries, symbol }: CryptoMetricsProps) {
       <ThemedCard className="p-4">
         <div className="text-sm text-muted-foreground mb-1">24h Volume</div>
         <NumberDisplay 
-          value={volume24h.toLocaleString()} 
+          value={volume24h.toFixed(decimalPlaces)} 
           size="lg"
         />
       </ThemedCard>

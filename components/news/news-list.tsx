@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { NewsItem } from '@/types/finnhub';
 import { format } from 'date-fns';
 import { ExternalLink } from 'lucide-react';
@@ -34,9 +35,11 @@ export function NewsList({ items, compact = false }: NewsListProps) {
         >
           <div className="flex gap-3">
             {!compact && item.image && (
-              <img
+              <Image
                 src={item.image}
                 alt={item.headline}
+                width={80}
+                height={80}
                 className="w-20 h-20 object-cover rounded-md flex-shrink-0"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';

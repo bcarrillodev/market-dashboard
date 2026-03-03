@@ -1,22 +1,37 @@
 'use client';
 
 import { usePolling } from '@/hooks/use-polling';
-import { getQuotes } from '@/app/actions/quotes';
 import { WatchlistItem } from '@/types/watchlist';
 import { Quote } from '@/types/finnhub';
 import { WatchlistRow } from './watchlist-row';
-import { ThemedCard } from '@/components/ui/themed-card';
 
 interface LiveWatchlistProps {
   symbols: WatchlistItem[];
   initialQuotes?: (Quote | null)[];
 }
 
+async function fetchQuotes(symbols: string[]): Promise<Record<string, Quote>> {
+  const response = await fetch('/api/quotes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ symbols }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch quotes: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { quotes?: Record<string, Quote> };
+  return payload.quotes ?? {};
+}
+
 export function LiveWatchlist({ symbols, initialQuotes }: LiveWatchlistProps) {
   const symbolStrings = symbols.map(s => s.symbol);
   
   const { data: quotes, isLoading } = usePolling<Record<string, Quote>>({
-    fetchFn: () => getQuotes(symbolStrings),
+    fetchFn: () => fetchQuotes(symbolStrings),
     interval: 15000,
     enabled: symbols.length > 0,
   });
